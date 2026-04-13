@@ -73,7 +73,7 @@ function ShellInner() {
       <BubbleCatalog pointerPosRef={pointerPosRef} />
 
       {/* ── Mini-app lazy mount ── */}
-      <MiniAppHost coreRef={bridge.coreRef} />
+      <MiniAppHost coreRef={bridge.coreRef} pointerPosRef={pointerPosRef} />
 
       {/* ── Puntatore diegetico (zero re-render a 60fps) ── */}
       <PointerLayer bridge={bridgeForPointer} />

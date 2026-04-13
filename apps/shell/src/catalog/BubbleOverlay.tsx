@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { AppManifest } from '@salvagente/shared-types';
 import type { BubbleLayout } from './types';
 
-const PINCH_DURATION_MS = 500; // Deve corrispondere al --pinch-duration CSS token
+const PINCH_DURATION_MS = 1000; // Deve corrispondere al --pinch-duration CSS token
 
 interface BubbleOverlayProps {
   manifest: AppManifest | null;
@@ -34,7 +34,7 @@ const TYPE_LABELS: Record<string, string> = {
 function PinchLoader({ progress }: { progress: number }) {
   const R = 22;
   const circ = 2 * Math.PI * R;
-  const dash = circ * progress;
+  const dash = circ * progress * 2;
 
   return (
     <svg width="56" height="56" viewBox="0 0 56 56" style={{ display: 'block' }}>

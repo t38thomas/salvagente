@@ -61,16 +61,8 @@ export function BubbleItem({ manifest, layout, isHovered, isFocused, isOtherFocu
   const glowIntensity = isFocused ? '0 0 60px 20px var(--bubble-glow-color)' : isHovered ? '0 0 30px 8px var(--bubble-glow-color)' : 'none';
 
   return (
-    <motion.div
-      data-bubble-id={manifest.id}
-      data-bubble-cx={layout.cx}
-      data-bubble-cy={layout.cy}
-      variants={bubbleVariants}
-      animate={variant}
-      transition={{
-        duration: 0.4,
-        ease: [0.22, 1, 0.36, 1],
-      }}
+    // 1. Wrapper posizionamento: Absolute + Centratura fissa -50%
+    <div
       style={{
         position: 'absolute',
         left: `${layout.cx}%`,
@@ -79,10 +71,24 @@ export function BubbleItem({ manifest, layout, isHovered, isFocused, isOtherFocu
         width: `var(${layout.sizeVar})`,
         height: `var(${layout.sizeVar})`,
         zIndex: (layout.layer + 1) * 10,
-        ...driftAnimation,
       }}
     >
-      {/* Corpo della bolla */}
+      {/* 2. Wrapper drift: Usa CSS animation (che setta un suo transform: translate) */}
+      <div style={{ width: '100%', height: '100%', ...driftAnimation }}>
+        {/* 3. Wrapper Framer Motion: Gestisce scale e opacità (che usa un altro transform) */}
+        <motion.div
+          data-bubble-id={manifest.id}
+          data-bubble-cx={layout.cx}
+          data-bubble-cy={layout.cy}
+          variants={bubbleVariants}
+          animate={variant}
+          transition={{
+            duration: 0.4,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+          style={{ width: '100%', height: '100%' }}
+        >
+          {/* Corpo della bolla */}
       <div
         style={{
           width: '100%',
@@ -141,6 +147,8 @@ export function BubbleItem({ manifest, layout, isHovered, isFocused, isOtherFocu
           }}
         />
       </div>
-    </motion.div>
+        </motion.div>
+      </div>
+    </div>
   );
 }

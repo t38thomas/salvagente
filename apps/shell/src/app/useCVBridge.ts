@@ -74,17 +74,55 @@ export function useCVBridge(): CVBridge {
             pointerCallbackRef.current(state.position.x, state.position.y, state.isPinching);
           }
 
-          // Commit su Zustand solo se cambia valore (eventi binari)
-          const { setPinching, setHandPresence } = storeApi.getState();
-          if (state.isPinching !== lastIsPinching) {
+          // Commit su Zustand solo se cambia valore (o se lo store è stato resettato esternamente)
+          const currentStore = storeApi.getState();
+          const { setPinching, setHandPresence } = currentStore;
+
+          if (state.isPinching !== lastIsPinching || state.isPinching !== currentStore.isPinching) {
             lastIsPinching = state.isPinching;
             setPinching(state.isPinching);
           }
-          if (state.isHandPresent !== lastIsHandPresent) {
+          if (state.isHandPresent !== lastIsHandPresent || state.isHandPresent !== currentStore.isHandPresent) {
             lastIsHandPresent = state.isHandPresent;
             setHandPresence(state.isHandPresent);
           }
         });
+
+        // ── Mouse Fallback ───────────────────────────────────
+        const onMouseMove = (e: MouseEvent) => {
+          // Inverti X perché il pointer layer usa (1 - nx)
+          const nx = 1 - (e.clientX / window.innerWidth);
+          const ny = e.clientY / window.innerHeight;
+          
+          if (pointerCallbackRef.current) {
+            pointerCallbackRef.current(nx, ny, lastIsPinching);
+          }
+          
+          const currentStore = storeApi.getState();
+          if (!lastIsHandPresent || !currentStore.isHandPresent) {
+            lastIsHandPresent = true;
+            currentStore.setHandPresence(true);
+          }
+        };
+
+        const onMouseDown = () => {
+          lastIsPinching = true;
+          storeApi.getState().setPinching(true);
+          // Riemetti callback col pinch attivo
+          if (pointerCallbackRef.current) {
+             // Use recent pos, but we don't have it directly. That's fine, the next RAF or mousemove fixes it, or we can just rely on the visual indicator
+             // To be perfect, we should store lastNx/lastNy
+          }
+        };
+
+        const onMouseUp = () => {
+          lastIsPinching = false;
+          storeApi.getState().setPinching(false);
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mousedown', onMouseDown);
+        window.addEventListener('mouseup', onMouseUp);
 
         core.on('handDetected', () => {
           storeApi.getState().setHandPresence(true);
@@ -99,6 +137,13 @@ export function useCVBridge(): CVBridge {
         });
 
         core.start(video);
+        
+        // Save cleanup func
+        (core as any)._mouseCleanup = () => {
+           window.removeEventListener('mousemove', onMouseMove);
+           window.removeEventListener('mousedown', onMouseDown);
+           window.removeEventListener('mouseup', onMouseUp);
+        };
       })
       .catch((err) => {
         // Webcam non disponibile — modalità demo: il catalogo funziona comunque
@@ -106,7 +151,11 @@ export function useCVBridge(): CVBridge {
       });
 
     return () => {
-      coreRef.current?.stop();
+      if (coreRef.current) {
+        const _cleanup = (coreRef.current as any)._mouseCleanup;
+        if (_cleanup) _cleanup();
+        coreRef.current.stop();
+      }
       coreRef.current = null;
       video.srcObject = null;
       document.body.removeChild(video);

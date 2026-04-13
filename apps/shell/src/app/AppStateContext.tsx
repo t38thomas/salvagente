@@ -54,7 +54,15 @@ function createAppStore() {
       set({ isPinching: v });
     },
 
-    resetToAttract: () => set({ ...INITIAL_SLICE }),
+    resetToAttract: () => {
+      const { isHandPresent, isPinching } = get();
+      set({
+        ...INITIAL_SLICE,
+        isHandPresent,
+        isPinching,
+        phase: isHandPresent ? 'browsing' : 'attract',
+      });
+    },
   }));
 }
 

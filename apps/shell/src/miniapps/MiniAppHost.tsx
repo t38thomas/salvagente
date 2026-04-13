@@ -14,7 +14,7 @@
 //   - sfondo per app
 //   - exit button di sicurezza (fallback per eventi pubblici)
 // ─────────────────────────────────────────────────────────────
-import { Suspense } from 'react';
+import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SalvagenteCore } from '@salvagente/core-cv';
 import { useAppState, useAppStoreApi } from '../app/AppStateContext';
@@ -51,22 +51,101 @@ function AppLoadingFallback() {
 }
 
 // ── Exit button ───────────────────────────────────────────────
-function ExitButton({ onExit }: { onExit: () => void }) {
+function ExitButton({ onExit, pointerPosRef }: { onExit: () => void; pointerPosRef: React.RefObject<{ x: number; y: number }> }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const [isHovered, setIsHovered] = useState(false);
+  const [confirmProgress, setConfirmProgress] = useState(0);
+
+  const hoverRef = useRef(false);
+  const pinchStartRef = useRef<number | null>(null);
+  const pinchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const animRafRef = useRef<number | null>(null);
+
+  // RAF loop per hit-test del bottone
+  const hitboxLoop = useCallback(() => {
+    const pos = pointerPosRef.current;
+    if (!pos || !buttonRef.current) {
+      rafRef.current = requestAnimationFrame(hitboxLoop);
+      return;
+    }
+
+    const { x: nx, y: ny } = pos;
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const px = (1 - nx) * W;
+    const py = ny * H;
+
+    const rect = buttonRef.current.getBoundingClientRect();
+    const margin = 40; // hitbox generosa
+    const hit = px >= rect.left - margin && px <= rect.right + margin &&
+      py >= rect.top - margin && py <= rect.bottom + margin;
+
+    if (hit !== hoverRef.current) {
+      hoverRef.current = hit;
+      setIsHovered(hit);
+    }
+
+    rafRef.current = requestAnimationFrame(hitboxLoop);
+  }, [pointerPosRef]);
+
+  useEffect(() => {
+    rafRef.current = requestAnimationFrame(hitboxLoop);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [hitboxLoop]);
+
+  // Hover-to-confirm (3s)
+  useEffect(() => {
+    if (isHovered) {
+      pinchStartRef.current = performance.now();
+      setConfirmProgress(0);
+
+      const animateProgress = () => {
+        const elapsed = performance.now() - (pinchStartRef.current ?? 0);
+        const progress = Math.min(elapsed / 2000, 1);
+        setConfirmProgress(progress);
+        if (progress < 1) {
+          animRafRef.current = requestAnimationFrame(animateProgress);
+        }
+      };
+      animRafRef.current = requestAnimationFrame(animateProgress);
+
+      pinchTimerRef.current = setTimeout(() => {
+        onExit();
+      }, 2000);
+    } else {
+      if (pinchTimerRef.current) {
+        clearTimeout(pinchTimerRef.current);
+        pinchTimerRef.current = null;
+      }
+      setConfirmProgress(0);
+    }
+    return () => {
+      if (pinchTimerRef.current) clearTimeout(pinchTimerRef.current);
+      if (animRafRef.current) cancelAnimationFrame(animRafRef.current);
+    };
+  }, [isHovered, onExit]);
+
   return (
     <motion.button
+      ref={buttonRef}
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 1.2, duration: 0.4 }}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.96 }}
-      onClick={onExit}
+      onClick={onExit} // Supporto fallback mouse
       style={{
         position: 'absolute',
         top: 20,
         right: 24,
         zIndex: 500,
-        background: 'rgba(12, 12, 22, 0.75)',
-        border: '1px solid rgba(255,255,255,0.12)',
+        background: isHovered ? 'rgba(255, 255, 255, 0.1)' : 'rgba(12, 12, 22, 0.75)',
+        border: `1px solid ${isHovered ? 'var(--color-accent)' : 'rgba(255,255,255,0.12)'}`,
+        boxShadow: isHovered ? '0 0 16px var(--color-accent-glow)' : 'none',
         borderRadius: 'var(--radius-pill)',
         color: 'var(--text-secondary)',
         fontFamily: 'var(--font-display)',
@@ -79,11 +158,24 @@ function ExitButton({ onExit }: { onExit: () => void }) {
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        transition: 'color 0.2s',
+        transition: 'color 0.2s, background-color 0.2s, box-shadow 0.2s, border-color 0.2s',
+        overflow: 'hidden',
       }}
     >
-      <span style={{ fontSize: 12 }}>←</span>
-      Catalogo
+      <div
+        style={{
+          position: 'absolute', inset: 0,
+          backgroundColor: 'var(--color-accent)',
+          opacity: 0.3,
+          transformOrigin: 'left',
+          transform: `scaleX(${confirmProgress})`,
+          transition: confirmProgress === 0 ? 'transform 0.2s' : 'none'
+        }}
+      />
+      <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 12 }}>←</span>
+        Catalogo
+      </span>
     </motion.button>
   );
 }
@@ -91,9 +183,10 @@ function ExitButton({ onExit }: { onExit: () => void }) {
 // ── Component ─────────────────────────────────────────────────
 interface MiniAppHostProps {
   coreRef: React.RefObject<SalvagenteCore | null>;
+  pointerPosRef: React.RefObject<{ x: number; y: number }>;
 }
 
-export function MiniAppHost({ coreRef }: MiniAppHostProps) {
+export function MiniAppHost({ coreRef, pointerPosRef }: MiniAppHostProps) {
   const storeApi = useAppStoreApi();
   const phase = useAppState(s => s.phase);
   const activeAppId = useAppState(s => s.activeAppId);
@@ -141,7 +234,7 @@ export function MiniAppHost({ coreRef }: MiniAppHostProps) {
             )}
           </Suspense>
 
-          <ExitButton onExit={handleExit} />
+          <ExitButton onExit={handleExit} pointerPosRef={pointerPosRef} />
         </motion.div>
       )}
     </AnimatePresence>
