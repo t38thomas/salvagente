@@ -1,12 +1,16 @@
 // ── ShadowPuppets.tsx ─────────────────────────────────────────
-// Mini-app demo — esperienza esplorativa.
-// Proietta una silhouette della mano con ombre dinamiche.
+// Mini-app multi-hand: proietta lo scheletro completo di ogni mano
+// con un colore diverso per slot (fino a 8 mani simultanee).
 //
-// Usa skeletonUpdate per disegnare i landmark completi della mano.
+// Comportamento multi-hand:
+//   - Ogni slot attivo viene disegnato in overlay con il suo colore
+//   - Quando il mouse è attivo, nessuno scheletro è visibile
+//   - Graceful degradation: se una mano sparisce, il suo skeleton scompare
 // ─────────────────────────────────────────────────────────────
 import { useEffect, useRef } from 'react';
-import type { MiniAppProps } from '../types';
-import type { RawSkeleton, CursorState } from '@salvagente/shared-types';
+import type { MultiHandMiniAppProps } from '../types';
+import type { HandSlot } from '@salvagente/shared-types';
+import { HAND_SLOT_COLORS } from '@salvagente/core-cv';
 
 // Connessioni tra landmark della mano (MediaPipe schema)
 const CONNECTIONS: [number, number][] = [
@@ -18,11 +22,10 @@ const CONNECTIONS: [number, number][] = [
   [5,9],[9,13],[13,17],
 ];
 
-export default function ShadowPuppets({ core }: MiniAppProps) {
-  const canvasRef    = useRef<HTMLCanvasElement>(null);
-  const skeletonRef  = useRef<RawSkeleton | null>(null);
-  const isPinchRef   = useRef(false);
-  const rafRef       = useRef<number | null>(null);
+export default function ShadowPuppets({ tracker }: MultiHandMiniAppProps) {
+  const canvasRef  = useRef<HTMLCanvasElement>(null);
+  const slotsRef   = useRef<readonly HandSlot[]>([]);
+  const rafRef     = useRef<number | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -37,12 +40,12 @@ export default function ShadowPuppets({ core }: MiniAppProps) {
     resize();
     window.addEventListener('resize', resize);
 
-    const onSkeleton = (sk: RawSkeleton) => { skeletonRef.current = sk; };
-    const onState    = (s: CursorState)  => { isPinchRef.current = s.isPinching; };
+    // ── Subscribe al tracker ──────────────────────────────────
+    const unsubscribe = tracker.subscribe(slots => {
+      slotsRef.current = slots;
+    });
 
-    core.on('skeletonUpdate', onSkeleton);
-    core.on('stateChange', onState);
-
+    // ── Render loop ───────────────────────────────────────────
     const render = () => {
       const W = canvas.width;
       const H = canvas.height;
@@ -52,59 +55,72 @@ export default function ShadowPuppets({ core }: MiniAppProps) {
       ctx.fillStyle = '#080e0c';
       ctx.fillRect(0, 0, W, H);
 
-      const sk = skeletonRef.current;
-      if (sk) {
-        const pts = sk.landmarks.map(lm => ({
-          x: (1 - lm.x) * W, // mirror
-          y: lm.y * H,
-        }));
+      const slots = slotsRef.current;
+      const activeSlots = slots.filter(s => s.active);
 
-        const isPinch = isPinchRef.current;
-        const baseColor = isPinch ? '#a8f0c8' : '#3ab4c8';
-
-        // Ombra proiettata
-        ctx.shadowBlur   = 60;
-        ctx.shadowColor  = isPinch ? 'rgba(168,240,200,0.4)' : 'rgba(58,180,200,0.3)';
-
-        // Connessioni
-        ctx.strokeStyle = baseColor;
-        ctx.lineWidth   = isPinch ? 4 : 2.5;
-        ctx.lineCap     = 'round';
-        ctx.globalAlpha = 0.85;
-
-        for (const [a, b] of CONNECTIONS) {
-          const pa = pts[a];
-          const pb = pts[b];
-          if (!pa || !pb) continue;
-          ctx.beginPath();
-          ctx.moveTo(pa.x, pa.y);
-          ctx.lineTo(pb.x, pb.y);
-          ctx.stroke();
-        }
-
-        // Nodi landmark
-        ctx.globalAlpha = 1;
-        for (let i = 0; i < pts.length; i++) {
-          const p = pts[i];
-          if (!p) continue;
-          const r = i === 0 ? 9 : i === 4 || i === 8 ? 7 : 4;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-          ctx.fillStyle = i === 4 || i === 8 ? '#ffffff' : baseColor;
-          ctx.fill();
-        }
-
-        ctx.shadowBlur  = 0;
-        ctx.globalAlpha = 1;
-      } else {
+      if (activeSlots.length === 0) {
         // Placeholder quando nessuna mano
-        ctx.fillStyle = 'rgba(58,180,200,0.08)';
+        ctx.fillStyle = 'rgba(58,180,200,0.06)';
         ctx.fillRect(0, 0, W, H);
 
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
         ctx.font = `300 clamp(14px,1.4vw,18px) 'DM Sans', sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillText('Mostra la mano alla webcam', W / 2, H / 2);
+      } else {
+        // ── Disegna ogni slot ──────────────────────────────────
+        for (const slot of activeSlots) {
+          if (!slot.landmarks || slot.landmarks.length < 21) continue;
+
+          const color   = HAND_SLOT_COLORS[slot.slotIndex] ?? '#ffffff';
+          const isPinch = slot.isPinching;
+
+          // Landmark → pixel (con mirror orizzontale)
+          const pts = slot.landmarks.map(lm => ({
+            x: (1 - lm.x) * W,
+            y: lm.y * H,
+          }));
+
+          // Ombra calda per ogni mano
+          ctx.shadowBlur  = 50;
+          ctx.shadowColor = hexToRgba(color, isPinch ? 0.5 : 0.25);
+
+          // Connessioni
+          ctx.strokeStyle  = color;
+          ctx.lineWidth    = isPinch ? 4 : 2.5;
+          ctx.lineCap      = 'round';
+          ctx.globalAlpha  = 0.82;
+
+          for (const [a, b] of CONNECTIONS) {
+            const pa = pts[a];
+            const pb = pts[b];
+            if (!pa || !pb) continue;
+            ctx.beginPath();
+            ctx.moveTo(pa.x, pa.y);
+            ctx.lineTo(pb.x, pb.y);
+            ctx.stroke();
+          }
+
+          // Nodi landmark
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur  = 8;
+          for (let i = 0; i < pts.length; i++) {
+            const p = pts[i];
+            if (!p) continue;
+            // Polpastrelli più grandi (4=pollice, 8=indice, 12=medio, 16=anulare, 20=mignolo)
+            const isTip = i === 4 || i === 8 || i === 12 || i === 16 || i === 20;
+            const isWrist = i === 0;
+            const r = isWrist ? 8 : isTip ? 6 : 3.5;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = isTip ? '#ffffff' : color;
+            ctx.fill();
+          }
+
+          ctx.shadowBlur  = 0;
+          ctx.globalAlpha = 1;
+        }
       }
 
       rafRef.current = requestAnimationFrame(render);
@@ -113,12 +129,11 @@ export default function ShadowPuppets({ core }: MiniAppProps) {
     rafRef.current = requestAnimationFrame(render);
 
     return () => {
-      core.off('skeletonUpdate', onSkeleton);
-      core.off('stateChange', onState);
+      unsubscribe();
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', resize);
     };
-  }, [core]);
+  }, [tracker]);
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
@@ -144,4 +159,12 @@ export default function ShadowPuppets({ core }: MiniAppProps) {
       </div>
     </div>
   );
+}
+
+// ── util ─────────────────────────────────────────────────────
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha.toFixed(3)})`;
 }

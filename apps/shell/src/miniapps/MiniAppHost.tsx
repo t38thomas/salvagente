@@ -4,6 +4,7 @@
 // Contratto mini-app:
 //   - riceve `core` (SalvagenteCore già avviato)
 //   - riceve `onExit` callback
+//   - riceve `tracker` + `activeHandCount` (multi-hand bridge)
 //   - NON deve gestire la webcam
 //   - NON deve conoscere il catalogo
 //   - NON deve fare routing
@@ -13,14 +14,14 @@
 //   - animazione di ingresso/uscita
 //   - sfondo per app
 //   - exit button di sicurezza (fallback per eventi pubblici)
+//   - inizializzazione MultiHandBridge (una volta sola per session)
 // ─────────────────────────────────────────────────────────────
 import { Suspense, useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SalvagenteCore } from '@salvagente/core-cv';
 import { useAppState, useAppStoreApi } from '../app/AppStateContext';
+import { useMultiHandBridge } from '../app/useMultiHandBridge';
 import { findRegistryEntry } from './registry';
-
-// MiniAppProps e MiniAppComponent → importati da ./types (evita dipendenza circolare)
 
 // ── Loading state interno ─────────────────────────────────────
 function AppLoadingFallback() {
@@ -97,7 +98,7 @@ function ExitButton({ onExit, pointerPosRef }: { onExit: () => void; pointerPosR
     };
   }, [hitboxLoop]);
 
-  // Hover-to-confirm (3s)
+  // Hover-to-confirm (2s)
   useEffect(() => {
     if (isHovered) {
       pinchStartRef.current = performance.now();
@@ -137,7 +138,7 @@ function ExitButton({ onExit, pointerPosRef }: { onExit: () => void; pointerPosR
       transition={{ delay: 1.2, duration: 0.4 }}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.96 }}
-      onClick={onExit} // Supporto fallback mouse
+      onClick={onExit}
       style={{
         position: 'absolute',
         top: 20,
@@ -191,6 +192,9 @@ export function MiniAppHost({ coreRef, pointerPosRef }: MiniAppHostProps) {
   const phase = useAppState(s => s.phase);
   const activeAppId = useAppState(s => s.activeAppId);
 
+  // Bridge multi-hand — inizializzato una sola volta per l'intera sessione
+  const { tracker, activeHandCount } = useMultiHandBridge(coreRef.current);
+
   const entry = activeAppId ? findRegistryEntry(activeAppId) : null;
   const AppComponent = entry?.component ?? null;
   const manifest = entry?.manifest ?? null;
@@ -230,6 +234,8 @@ export function MiniAppHost({ coreRef, pointerPosRef }: MiniAppHostProps) {
               <AppComponent
                 core={coreRef.current}
                 onExit={handleExit}
+                tracker={tracker}
+                activeHandCount={activeHandCount}
               />
             )}
           </Suspense>
