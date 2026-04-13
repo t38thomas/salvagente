@@ -57,6 +57,9 @@ export function BubbleField({ manifests, layouts, pointerPosRef, onAppOpen }: Bu
   const focusedId = useAppState(s => s.focusedBubbleId);
   const isPinching = useAppState(s => s.isPinching);
 
+  // Debug mode visiva
+  const [isDebug] = useState(() => new URLSearchParams(window.location.search).has('debug'));
+
   // ── Stato locale pinch-to-confirm ────────────────────────────
   const [confirmProgress, setConfirmProgress] = useState(0);
   const pinchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -76,7 +79,10 @@ export function BubbleField({ manifests, layouts, pointerPosRef, onAppOpen }: Bu
     const { x: nx, y: ny } = pos; // normalizzato 0–1
     const W = window.innerWidth;
     const H = window.innerHeight;
-    const px = nx * W;
+    // FIX MAPPING: Applichiamo il mirror orizzontale per far combaciare
+    // le coordinate normalizzate MediaPipe con il viewport,
+    // esattamente come fa il PointerLayer
+    const px = (1 - nx) * W;
     const py = ny * H;
 
     let closestId: string | null = null;
@@ -241,6 +247,32 @@ export function BubbleField({ manifests, layouts, pointerPosRef, onAppOpen }: Bu
           zIndex: 5,
         }}
       />
+
+      {/* ── DEBUG Hitboxes ── */}
+      {isDebug && (
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
+          {layouts.map(layout => {
+            const { cx, cy } = getBubbleCenterPx(layout);
+            const radius = getBubbleRadiusPx(layout);
+            return (
+              <div
+                key={`debug-${layout.id}`}
+                style={{
+                  position: 'absolute',
+                  left: cx,
+                  top: cy,
+                  width: radius * 2,
+                  height: radius * 2,
+                  transform: 'translate(-50%, -50%)',
+                  borderRadius: '50%',
+                  border: '1px dashed red',
+                  backgroundColor: 'rgba(255, 0, 0, 0.1)'
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
