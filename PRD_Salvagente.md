@@ -1,105 +1,57 @@
-# Product Requirements Document (PRD) - Salvagente
+# Product Requirements Document (PRD) - Salvagente (v2 Consolidato)
 
-***
+---
 
-### 1. Visione sintetica del prodotto
-**Salvagente** è una piattaforma interattiva e contemplativa, pensata per spazi fisici condivisi. Tramite la computer vision e il body/hand-tracking, trasforma il corpo umano nell'unico controller necessario per esplorare un ecosistema di mini-esperienze digitali. Promuove la "riappropriazione degli spazi mentali, fisici e digitali" abbattendo la barriera delle UI rigide: il sistema reagisce in modo organico e fluido alla presenza umana, divenendo esso stesso uno spazio arioso, vitale e senza confini.
+## 1. Visione Operativa e Finalità
+**Salvagente** è una piattaforma web interattiva progettata per eventi fisici, fruibile tramite hand-tracking (computer vision). La "Root Experience" è rappresentata da un ecosistema di bolle fluttuanti che fa da catalogo e punto d'accesso a singole mini-app (esperienze tematiche). 
+L'installazione veicola il tema della **"riappropriazione degli spazi fisici e mentali"** attraverso un design organico, un'interfaccia _zero-friction_ priva di periferiche fisiche e un look&feel che privilegia leggerezza, respiro e fluidità (assenza di griglie tradizionali).
 
-### 2. Problem statement
-Negli ambienti digitali classici, l'interazione è mediata da device esterni o costretta all'interno di interfacce rigide (a griglia) che impongono un enorme carico cognitivo all'utente, allontanandolo dalla consapevolezza del proprio respiro e fisicità. Negli eventi pubblici, le installazioni digitali affrontano tassi di abbandono elevati a causa di un *onboarding* faticoso, istruzioni incomprensibili scritte in piccolo, e una mancanza di feedback immediato tra corpo e macchina che inibisce la spontaneità.
+## 2. Branding 
+- **Salvagente**: Il prodotto e brand principale. Presente in modo elegante ma preponderante, impiega font chiari e distesi e un microcopy astratto, non-tecnicistico ed empatico.
+- **Naqah**: Branding istituzionale curatore. Discreto, confinato nelle zone perimetrali inferiori ("A project by Naqah").
 
-### 3. Product goals
-*   **Meraviglia istantanea (*Time-to-Wow < 3s*)**: Il sistema deve attrarre visivamente e far capire all'utente che sta reagendo al suo corpo in pochissimi istanti.
-*   **Fluidità esplorativa**: Permettere la navigazione naturale dello spazio e la selezione di percorsi (le mini-app) senza percezioni di sforzo tecnologico.
-*   ***Zero-friction Onboarding***: Eliminare tutorial testuali invasivi, click a vuoto e procedure di login, supportando una fruizione "hit-and-run" in contesti dinamici come eventi o mostre.
-*   **Emersione coerente del Brand**: Stabilire "Salvagente" come entità dotata di identità viva e respirante, con l'identità istituzionale di Naqah percepita chiaramente ma con garbo.
+## 3. Product Goals & Requisiti Funzionali Core
+- **Time-to-Wow (Attract rapido)**: Ingaggio immediato. Quando il visitatore si avvicina, il sistema riconosce la mano ed esplicita il pointer visivo del canvas in *meno di 3 secondi*.
+- **Low-Fatigue (Anti Gorilla-Arm)**: Mappatura del pointer asimmetrica per cui azioni a mezz'aria in posizioni di riposo (braccia verso il basso/centro) possono raggiungere tutto il campo visivo utile.
+- **Elaborazione Local-First**: Inferenza della Computer Vision rigorosamente *client-side* per zero latenza critica e garanzia totale della privacy dei passanti. Nessun stream video deve uscire dal perimetro locale.
+- **Modularità Ospite/Contenitore**: Salvagente funge da Shell/Host. Le mini-app vengono istanziate indipendentemente ed esclusivamente come **componenti React lazy-loaded** (nessun iframe), ricevendo lo stato di input globale della mano ma eseguendo le proprie logiche in isolamento logico.
 
-### 4. Non-goals
-*   NON è una piattaforma di utilità basata su form e tabelle.
-*   NON traccia, raccoglie o salva dati sensibili per sessioni successive o Analytics legati alle identità (niente account utente o log in).
-*   NON usa interazioni faticose prolungate che possano generare il "Gorilla Arm effect" (esaurimento muscolare da braccio alzato).
-*   NON è un'esperienza competitiva, gamificata con punteggi, o focalizzata sull'adrenalina.
+## 4. Esperienza Utente: Il Catalogo V1 (Root Experience)
+### A. Spazio e Movimento delle Bolle
+- **Il Canvas**: Uno sfondo materico e profondo (es. gradienti fluidi, glassmorphism), renderizzato tipicamente in 2.5D. Le bolle fungono da oblò tematici.
+- **Fisica Semplificata**: Per garantire stabilità funzionale nell'MVP, le bolle non avranno complesse logiche N-Body (nessuna caoticità pura da collisione continua). Seguono invece orbite lente pseudo-randomiche o pattern di oscillazione di *idle*, restando focalizzate e stabili "a portata di mira".
+- **La Gestione dell'Overflow**: Nessuna "scroll-bar". Le bolle fuori o al bordo dello schermo viaggiano e si ripresentano ciclicamente. In V1 si mantiene un numero limitato di bolle simultanee, sufficiente a non ingorgare il viewport.
 
-### 5. Utente tipo in contesto evento
-L'**Esploratore Curioso**: è in movimento in un ambiente rumoroso o affollato. Ha un'attenzione frammentata e un perimetro decisionale limitato. Cerca, per induzione, momenti di evasione, relax o un banale svago artistico. Se il sistema lo ingaggia reagendo armonicamente alla sua presenza, è disposto a rallentare e dedicare dai 2 ai 5 minuti di totale attenzione immersiva. Se l'interfaccia sembra difficile o si sente giudicato, abbandona.
+### B. Pointer & Tolleranza (Hitboxing)
+- **Pointer Diegetico**: Rigettata definitivamente la logica "Freccina del Mouse". Il feedback della mano è un anello di luce organico, un deformatore o un elementale (particelle). 
+- **Forgiving Hitboxes**: L'area magnetica invisibile che "cattura" il pointer è dilatata (es. +40%) rispetto alla dimensione vettoriale/raster della bolla, per disinnescare la frustrazione dei tremolii ottici di puntamento.
 
-### 6. Perché la scelta delle bolle fluttuanti è coerente con Salvagente
-Il concetto di bolla evoca leggerezza, aria, assenza di margini spigolosi e organicità. Riformula il confine rigido dello schermo web in uno specchio d'acqua o nell'atmosfera di gravità zero. Andare incontro a una bolla significa cercare un respiro prolungato. Le bolle si muovono e fluttuano reagendo allo spazio attorno a loro: un perfetto specchio concettuale della "riappropriazione spaziale", contrapposta alla logica oppressiva di una cartella desktop statica e senza vita. 
+## 5. User Journey Strategico (Flow d'Ingresso)
+Il tragitto per l'accesso a un'esperienza si snoda in questi passaggi:
 
-### 7. Principi UX fondamentali
-*   **Reattività ambientale**: Il mondo digitale non "aspetta di essere cliccato", ma oscilla, si sposta o si illumina non appena individua lo scheletro/mano dell'utente.
-*   **Tolleranza spaziale (*Forgiving Hitboxes*)**: Le bolle hanno un'apertura magnetica. Il puntamento non dev'essere millimetrico (l'utente potrebbe tremare e muoversi).
-*   **Profondità, non Scorrimento**: Non esiste la *scroll bar*. Si viaggia sull'asse Z (avvicinamento) o facendo fluttuare/muovere l'ambiente e facendo emergere elementi nuovi tramite parallasse.
-*   **Rivelazione progressiva**: Il rumore visivo è mantenuto al minimo assoluto. Le informazioni dettagliate appaiono solo quando l'attenzione si concentra intenzionalmente su una specifica bolla.
+1. **Attract Loop (Attesa):** Nessun corpo rilevato. Bolle che galleggiano fluttuanti in totale ociosità. Micro-copy ambientale minimale (es. *"Alza una mano per avvicinarti"*).
+2. **Hand Detected (Sincronizzazione):** Agganciato il landmark, il testo ambiente sparisce e il *Pointer Visivo* fiorisce a schermo. Il feedback di aggancio deve essere percepito dall'utente come **immediato e organico**, garantito tramite rigoroso smoothing e interpolazione visiva fluidi che mascherano l'eventuale latenza sottostante (abolite soglie rigide in millisecondi in favore della fluidità percepita).
+3. **Hover & Reveal (Focalizzazione):** Il passante sposta il pointer sopra la forgiving-hitbox di una bolla.
+    - L'orbita della bolla bersaglio frena, si stabilizza centralmente e la bolla subisce una leggera enfasi (es. scale +15%), mentre lo sfondo e le altre bolle sfocano.
+    - Accanto/Sotto la bolla balza in view un pannello/HUD elegante e leggibile in materico (vetro/sfocatura) contenente rigorosamente:
+        - *Nome App* (es. "Soffio")
+        - *One-liner* (Meno di 10 parole - es. "Allontana i pensieri muovendo l'aria")
+        - *Tipologia di Esperienza* via etichetta (es. `[✨ Contemplativo]`)
+        - *Gesto richiesto visivo* (Icona due dita chiuse + "Pinch per entrare")
+4. **Pinch-to-Confirm (Impegno):** Ricevuto l'istinto verbale/visivo, l'utente chiude pollice e indice. Un loader radiale circonda immediatamente il pointer e richiede tra **300ms a 500ms** continui.
+   - *Se rilasciato prima*, il timer implode istantaneamente ritornando alla posa 3. 
+   - *Se mantenuto*, il trigger scatta inesorabilmente e disabilita il menu.
+5. **Transizione "Inabissamento":** La bolla satura lo schermo inglobandolo in modo fluido. L'istanza dell'app si monta a pieno formato.
 
-### 8. Principi visuali e tonali
-*   **Materia e Atmosfera**: Uso diffuso di layer atmosferici, profondità di campo (DOF), blur morbidi, materiali ispirati al glassmorphism o semitrasparenze liquide con color-grading calmi e meditativi (crepuscolo, alba, abissi caldi).
-*   **UI Diegetica**: Non ci sono "pulsanti rettangolari", ma oggetti di scena con i quali interagire.
-*   **Tipografia Evocativa**: Font san-serif moderni geometrici oppure contrasti eleganti usando serif di grandi dimensioni, per infondere pulizia e alta leggibilità. 
-*   **Tono di voce**: Calmo, imperativo ma sussurrato, astratto.
+## 6. Flow di Uscita e Sistemi di Sopravvivenza (Gestione Abbondono)
+Nei contesti eventistici la caduta di attenzione e l'abbandono sono fisiologici; Salvagente interviene per rimettere in bolla lo stage per la prossima persona.
 
-### 9. Information architecture di alto livello
-*   **Modalità Attesa (Attract Loop)**: Un ambiente pulsante silenzioso. Scritte flebili incitano il passante.
-*   **L'Ecosistema (Root - Catalogo a bolle)**: L'ambiente multidimensionale esplorabile, le app fluttuano attorno.
-*   **Lo Stato di Fuoco (Hover Detail)**: La bolla selezionata emerge, le altre arretrano fuori fuoco.
-*   **L'Inabissamento (Transizione)**: La bolla copre lo schermo fluido e si apre la mini-app.
-*   **Il Nucleo (La Mini-app)**: L'esperienza focalizzata.
-*   **La Risalita (Ritorno)**: Con un gesto universale predefinito o tramite un orb sempre presente, si espande la scena e si torna al catalogo.
+1. **Uscita Esplicita (Controllo Utente)**: Non essendoci swiping complessi (scartati nella V1 per fragilità di pattern), all'interno di ogni singola mini-app ci dovrà essere _obbligatoriamente_ uno standard UI di piattaforma: un "Orb / Bottone" di ritorno ubicato in un quadrante coerente (es. In alto a destra). Lo si punta, si fa pinch -> si torna in Root.
+2. **Idle Timeout Globale (Fallback Primario Automagico)**: È l'assicurazione sulla vita di Salvagente.
+   - Costante monitoraggio dell'attività (mano assente da schermo, scheletro non trovato da AI).
+   - Se per **X secondi consecutivi** (Valori predefiniti ipotetici: `15s` se bloccati nel router catalogo, `45/60s` in base all'esigenza dentro una mini-app) il modulo CV entra in morte di segnale utente: 
+   - Scatta un *Hard/Soft Reset Autonomo*: Il router interrompe forzatamente il guest e disvela un sipario nero/sfumato riportando la scena all'**Attesa** (Loop 1).  
 
-### 10. Flow utente ideale dall’aggancio iniziale all’uscita
-1.  **Aggancio**: L'utente passa davanti al display. Il sistema, riconoscendolo, accende un fascio visivo o il suo riflesso nel background virtuale si deforma e lo inquadra al centro.
-2.  **Apprendimento motore**: L'utente alza involontariamente la mano. Vede immediatamente un pointer morbido (es. un anello di luce) specchiare il moto dell'indice.
-3.  **Esplorazione**: Facendo spostare l'anello luminoso nello spazio tridimensionale sposta l'ambiente. Passa vicinissimo a una bolla che si ingrandisce del 20%.
-4.  **Innesco dell'Informazione**: Fermandosi sopra la bolla, compare il contesto della mini-app e la CTA fluttuante.
-5.  **Pinch Action**: L'utente chiude pollice e indice. Un anello visivo di "caricamento interazione" si completa in 300-500ms al fine di evitare le chiusure accidentali da rumore algoritmico.
-6.  **Submersion e Terminazione**: Entra nell'app, compie la sua esperienza e, a fine ciclo (o con uscita di emergenza), viene rimbalzato dolcemente in superficie, pronto per la prossima bolla o per abbandonare l'area.
-
-### 11. Struttura concettuale del catalogo a bolle
-Il browser non inquadra una "pagina", ma una "finestra stagna" che affaccia su uno scenario 2.5D/3D (es. usando shader WebGL, Three.js/React-Three-Fiber o logiche spaziali in librerie fisiche).
-Le bolle hanno fisicità: orbitano pigramente, reagiscono l'una all'altra se appaiate. La navigazione del catalogo è determinata dalla cinetica della mano e non soffre restrizioni numeriche (se la collezione di esperienze cresce, l'universo diventa semplicemente più denso nei livelli non a fuoco). I confini dello schermo non sono respingenti ma porosi; le bolle possono fluttuare in "fuori onda" a destra per rientrare misteriosamente da sinistra.
-
-### 12. Come l’utente scopre, comprende e seleziona una bolla
-Il processo meccanico si suddivide in tre attriti crescenti:
-*   **Magnetismo di scoperta**: Il pointer attrae impercettibilmente la bolla più vicina se l'intenzionalità della mano va nella sua direzione.
-*   **Focus State calmo**: Una volta intersecata l'area di Hitbox, la bolla arresta il suo percorso organico, stabilizzando la visuale. L'utente *comprende* di avere un oggetto sotto mira.
-*   **Intention Catching (Pinch to fill)**: Il gesto di chiusura delle dita attiva un *fill bar* o un cerchio di risonanza sulla bolla ("Hold to confirm"). Se si lascia la presa, il caricamento svanisce istantaneamente e dolcemente per preservare lo stato naturale delle cose; se esplode, l'azione parte.
-
-### 13. Come mostrare gesto richiesto, descrizione e tipo esperienza prima dell’apertura
-Sotto l'azione di *Hover/Focus State*, la bolla innesca una transizione materica elegante sul suo guscio protettivo:
-*   Apre un "HUD diegetico" o un velo satinato (Glass/Blur) subito di fianco o sotto. 
-*   **Titolo in evidenza** con la tipografia decisa del brand (es. "Risveglio").
-*   **Descrizione** sottile, massimo dieci parole per restare scansionabili (es. "Scaccia la nebbia soffiando o muovendo le tue mani.").
-*   **Gesto Richiesto**: A fianco del blocco testo o sul pulsante sorge un'icona semantica minimale e la dicitura del "Genere" stilizzata a tag (es. `[ ✨ Contemplativo ]` + `( Icona Pinch ) Pinch per immergerti`). L'iconografia del body tracking è essenziale allo svincolo logico del tutorialing, e dev'essere elegantissima.
-
-### 14. Requisiti funzionali
-*   Uso stringente del client-side inference per la computer vision (es. MediaPipe o simili), evitando invio di flussi live su server (fondamentale per la privacy su suolo espositivo).
-*   Fluid management & shader engine (es. WebGL) capace di caricare e gestire le fisiche orbitali del main menu mantenendosi coerente con framerate stabili e ottime performances di calcolo.
-*   Modulare ad Architettura "Container/Guest": Salvagente come Shell deve importare con stabilità il canvas o la vista delle singole mini-app come componenti child/iframe isolati, salvando lo state dell'app ospitante (event-bus registrati in globale).
-*   Eventi uniformati e globali sulle gesturalità primarie (`onPinchStart`, `onPinchEnd`, `onHandLost`) da esporre come design system API al team di sviluppo delle mini-app.
-
-### 15. Requisiti non funzionali
-*   **Alta Performance / Bassa Latenza**: Obbligo di stabilità del framerate a +45fps. Droppare frame in un'installazione spaziale-cinetica induce mal di mare e la sensazione del "giocattolo guasto".
-*   **Fallback temporizzato (Auto-Idle Timeout)**: Qualora un utente abbandoni l'esposizione fisicamente mentre era in mezzo all'uso di un'esperienza o tenendo incastrata l'AI, il sistema deve contare X secondi di assenza scheletro/viso per ripristinare soft lo stream iniziale di Salvagente.
-*   **Zero motion-sickness e accessibilità ottica**: Niente stroboscopia, nessuna deviazione cromatica spinta o interfacce epilettiche tra le transizioni del container delle app e della root principale.
-
-### 16. Direzione per branding e microcopy
-**Gerarchia:**
-*   Il wordmark di **Salvagente** primeggia con stile. Il lettering è morbido, accogliente e respirante, con molto spazio interlettera o un peso tipografico che sa farsi guardare senza aggredire l'occhio.
-*   Il logo o l'etichetta di **Naqah** è inserita nelle core zones perimetrali (esempio in fondo allo schermo con un "*Presented by / A project by Naqah*") in opacità non intrusiva ma di grande riconoscibilità culturale dal vivo. Non offusca mai le bolle.
-
-**Microcopy:**
-*   Vocabolario empatico, positivo e non freddorso-tecnico (Mai: "Loading Data...", "Detecting Hand", "Error 404").
-*   Evocare lo spostamento (Sì: "Torna a respirare", "Lasciati andare", "Sfiora per aprire"). 
-
-### 17. Errori concettuali da evitare
-*   **La Sindrome della 'Finta Freccina'**: Imporre la freccia del mouse disegnata o una riproduzione vettoriale di una mano (cursor mode) che si muove per lo schermo distrugge la magia visiva. Optare piuttosto per una scia chimica di luce morbida, particelle o deformatori spaziali legati al tracking della mano.
-*   **Carousel Invisibile o Cover Flow banale**: Ridurre le bolle ad un mero *slick carousel* che scivola solo destra-sinistra lede totalmente l'idea di "assenza spaziale". Il menu *deve* avere gravità z o simulazioni simil-particellari.
-*   **Costrizioni o "Muri di gomma" violenti**: Rimanendo incastrati nel telaio dello schermo. Se il catalogo reagisce alla profondità corporea, le bolle devono scivolare con *friction* e peso ponderati come astri. 
-*   **BabelGestalt – La torre di Babele Gestuale**: Obbligare gli utenti a compiere gesti non previsti o mai istruiti nella vista a bolle. Si apprende all'entrata che si può stringere e muovere, si naviga e vive fino all'epilogo sfruttando un vocabolario noto e unificato.  
-
-### 18. Roadmap consigliata di costruzione
-1.  **Fase 1: Skeleton & Tracking Proof of Concept**: Validazione tecnica. Si crea l'environment puro, un canvas nero e si inserisce solo il modulo AI (MediaPipe o simile) tarando i framerates e calcolando la logica degli eventi pointer + pinch da telecamera (gestione rumore e smooth data points).
-2.  **Fase 2: La Macchina del Respiro (Fisica)**: Si crea concettualmente l'universo del menu root. Utilizzando il tool 3d (es. React Three Fiber), si posizionano sfere volumetriche prive d'input con regole fisiche spaziali (fluidodinamica di base, repulsione e gravitazione) e si setta un renderer che ispiri alta suggestività emozionale allo sguardo.
-3.  **Fase 3: Bridging Input & Interface**: Aggancio del pointer della telecamera alle hitbox delle bolle. Implementazione del sistema di *Magnetic Hover* e dell'UX UI *Pinch-to-Fill* per la conferma e l'apertura delle informazioni semantiche di testo per la scoperta delle app, con lo scaffolding dei Guest Components in React.
-4.  **Fase 4: Transizioni e Integrazioni App**: Progettazione dell'effettiva animazione che connette il Root Ecosistema alla singola mini-experience isolata, con gestione degli stati di ripristino ("Ritorna/Esci" e la chiusura per timeout corporeo).
-5.  **Fase 5: Fine Tuning Sensoriale e Stress Test ambientali**: Passaggio conclusivo di calibrazione dell'Attract Loop, inserimento dei loghi e stili di Naqah. Calibrazione in camera o ufficio con illuminazione estrema. Test con pubblico passivo inesperto per verificare l'immediatezza reale delle istruzioni in-app senza il costrutto verbale umano.
+## 7. Precauzioni di Design per Implementabilità Piena
+- **Assenza di "Lag da Legno"**: La computer vision farà necessariamente fatica a gestire input a 60fps solidi continui per la natura neurale: il layer di rappresentazione visuale (shader/ThreeJS/DOM-Anim) deve obbligatoriamente *interpolare* linearmente e morbidamente tra i due delta dei points del marker (es. lerp/damping fluidi), staccando le prestazioni dal framerate dell'AI e simulando uno "strascico cinematico" sul cursore che maschera la latenza AI. 
+- Nessun tutorial invasivo bloccante ad ingresso: lo step `Hover & Reveal` assume totalmente le funzioni istruttive. Se l'utente non lo capisce in Hover, il design dell'HUD va rifatto testuale e più grande. 

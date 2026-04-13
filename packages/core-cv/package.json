@@ -1,0 +1,17 @@
+{
+  "name": "@salvagente/core-cv",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.14",
+    "@salvagente/shared-types": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2"
+  }
+}
